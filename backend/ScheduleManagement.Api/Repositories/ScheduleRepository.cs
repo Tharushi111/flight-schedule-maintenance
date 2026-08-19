@@ -564,4 +564,33 @@ public sealed class ScheduleRepository : IScheduleRepository
 
         return affectedRows > 0;
     }
+
+    public async Task<bool> DeleteAsync(
+    int scheduleId,
+    CancellationToken cancellationToken = default)
+{
+    const string sql = """
+        DELETE FROM FlightSchedule
+        WHERE ScheduleId = @ScheduleId;
+        """;
+
+    await using var connection =
+        new SqlConnection(_connectionString);
+
+    await using var command =
+        new SqlCommand(sql, connection);
+
+    command.Parameters.Add(
+        "@ScheduleId",
+        SqlDbType.Int).Value =
+        scheduleId;
+
+    await connection.OpenAsync(cancellationToken);
+
+    var affectedRows =
+        await command.ExecuteNonQueryAsync(
+            cancellationToken);
+
+    return affectedRows > 0;
+}
 }
