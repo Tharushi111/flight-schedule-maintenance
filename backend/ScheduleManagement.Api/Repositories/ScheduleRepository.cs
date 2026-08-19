@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
+using ScheduleManagement.Api.Common;
 using ScheduleManagement.Api.Models.Entities;
 
 namespace ScheduleManagement.Api.Repositories;
@@ -16,6 +17,8 @@ public sealed class ScheduleRepository : IScheduleRepository
                 "Database connection string 'DefaultConnection' was not found.");
     }
 
+    
+    // GET ALL SCHEDULES WITH OPTIONAL FILTERS
     public async Task<IReadOnlyList<ScheduleListRow>> GetAllAsync(
         int? originAirportId,
         int? destinationAirportId,
@@ -56,12 +59,10 @@ public sealed class ScheduleRepository : IScheduleRepository
                     OR fs.OriginAirportId = @OriginAirportId)
 
                 AND
-
                 (@DestinationAirportId IS NULL
                     OR fs.DestinationAirportId = @DestinationAirportId)
 
                 AND
-
                 (@Status IS NULL
                     OR fs.Status = @Status)
 
@@ -177,112 +178,233 @@ public sealed class ScheduleRepository : IScheduleRepository
         return schedules;
     }
 
-    public async Task<int> CreateAsync(
-    FlightSchedule schedule,
-    CancellationToken cancellationToken = default)
-{
-    const string sql = """
-        INSERT INTO FlightSchedule
-        (
-            FlightNumber,
-            OriginAirportId,
-            DestinationAirportId,
-            DepartureTime,
-            ArrivalTime,
-            AircraftType,
-            DaysOfOperation,
-            EffectiveFrom,
-            EffectiveTo,
-            Status,
-            CreatedOn,
-            ModifiedOn
-        )
-        OUTPUT INSERTED.ScheduleId
-        VALUES
-        (
-            @FlightNumber,
-            @OriginAirportId,
-            @DestinationAirportId,
-            @DepartureTime,
-            @ArrivalTime,
-            @AircraftType,
-            @DaysOfOperation,
-            @EffectiveFrom,
-            @EffectiveTo,
-            @Status,
-            @CreatedOn,
-            NULL
-        );
-        """;
-
-    await using var connection =
-        new SqlConnection(_connectionString);
-
-    await using var command =
-        new SqlCommand(sql, connection);
-
-    command.Parameters.Add(
-        "@FlightNumber",
-        SqlDbType.VarChar,
-        7).Value = schedule.FlightNumber;
-
-    command.Parameters.Add(
-        "@OriginAirportId",
-        SqlDbType.Int).Value = schedule.OriginAirportId;
-
-    command.Parameters.Add(
-        "@DestinationAirportId",
-        SqlDbType.Int).Value = schedule.DestinationAirportId;
-
-    command.Parameters.Add(
-        "@DepartureTime",
-        SqlDbType.Time).Value = schedule.DepartureTime;
-
-    command.Parameters.Add(
-        "@ArrivalTime",
-        SqlDbType.Time).Value = schedule.ArrivalTime;
-
-    command.Parameters.Add(
-        "@AircraftType",
-        SqlDbType.VarChar,
-        10).Value = schedule.AircraftType;
-
-    command.Parameters.Add(
-        "@DaysOfOperation",
-        SqlDbType.VarChar,
-        7).Value = schedule.DaysOfOperation;
-
-    command.Parameters.Add(
-        "@EffectiveFrom",
-        SqlDbType.Date).Value = schedule.EffectiveFrom;
-
-    command.Parameters.Add(
-        "@EffectiveTo",
-        SqlDbType.Date).Value =
-        schedule.EffectiveTo.HasValue
-            ? schedule.EffectiveTo.Value
-            : DBNull.Value;
-
-    command.Parameters.Add(
-        "@Status",
-        SqlDbType.VarChar,
-        12).Value = schedule.Status;
-
-    command.Parameters.Add(
-        "@CreatedOn",
-        SqlDbType.DateTime2).Value = schedule.CreatedOn;
-
-    await connection.OpenAsync(cancellationToken);
-
-    var result =
-        await command.ExecuteScalarAsync(cancellationToken);
-
-    if (result is null)
+    // GET ONE SCHEDULE BY ID
+        public async Task<FlightSchedule?> GetByIdAsync(
+        int scheduleId,
+        CancellationToken cancellationToken = default)
     {
-        throw new InvalidOperationException(
-            "The schedule was inserted but no ScheduleId was returned.");
+        const string sql = """
+            SELECT
+                ScheduleId,
+                FlightNumber,
+                OriginAirportId,
+                DestinationAirportId,
+                DepartureTime,
+                ArrivalTime,
+                AircraftType,
+                DaysOfOperation,
+                EffectiveFrom,
+                EffectiveTo,
+                Status,
+                CreatedOn,
+                ModifiedOn
+            FROM FlightSchedule
+            WHERE ScheduleId = @ScheduleId;
+            """;
+
+        await using var connection =
+            new SqlConnection(_connectionString);
+
+        await using var command =
+            new SqlCommand(sql, connection);
+
+        command.Parameters.Add(
+            "@ScheduleId",
+            SqlDbType.Int).Value = scheduleId;
+
+        await connection.OpenAsync(cancellationToken);
+
+        await using var reader =
+            await command.ExecuteReaderAsync(cancellationToken);
+
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        return new FlightSchedule
+        {
+            ScheduleId =
+                reader.GetInt32(
+                    reader.GetOrdinal("ScheduleId")),
+
+            FlightNumber =
+                reader.GetString(
+                    reader.GetOrdinal("FlightNumber")),
+
+            OriginAirportId =
+                reader.GetInt32(
+                    reader.GetOrdinal("OriginAirportId")),
+
+            DestinationAirportId =
+                reader.GetInt32(
+                    reader.GetOrdinal("DestinationAirportId")),
+
+            DepartureTime =
+                reader.GetTimeSpan(
+                    reader.GetOrdinal("DepartureTime")),
+
+            ArrivalTime =
+                reader.GetTimeSpan(
+                    reader.GetOrdinal("ArrivalTime")),
+
+            AircraftType =
+                reader.GetString(
+                    reader.GetOrdinal("AircraftType")),
+
+            DaysOfOperation =
+                reader.GetString(
+                    reader.GetOrdinal("DaysOfOperation")),
+
+            EffectiveFrom =
+                reader.GetDateTime(
+                    reader.GetOrdinal("EffectiveFrom")),
+
+            EffectiveTo =
+                reader.IsDBNull(
+                    reader.GetOrdinal("EffectiveTo"))
+                    ? null
+                    : reader.GetDateTime(
+                        reader.GetOrdinal("EffectiveTo")),
+
+            Status =
+                reader.GetString(
+                    reader.GetOrdinal("Status")),
+
+            CreatedOn =
+                reader.GetDateTime(
+                    reader.GetOrdinal("CreatedOn")),
+
+            ModifiedOn =
+                reader.IsDBNull(
+                    reader.GetOrdinal("ModifiedOn"))
+                    ? null
+                    : reader.GetDateTime(
+                        reader.GetOrdinal("ModifiedOn"))
+        };
     }
 
-    return Convert.ToInt32(result);
-}
+    // CREATE NEW SCHEDULE
+        public async Task<int> CreateAsync(
+        FlightSchedule schedule,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            INSERT INTO FlightSchedule
+            (
+                FlightNumber,
+                OriginAirportId,
+                DestinationAirportId,
+                DepartureTime,
+                ArrivalTime,
+                AircraftType,
+                DaysOfOperation,
+                EffectiveFrom,
+                EffectiveTo,
+                Status,
+                CreatedOn,
+                ModifiedOn
+            )
+            OUTPUT INSERTED.ScheduleId
+            VALUES
+            (
+                @FlightNumber,
+                @OriginAirportId,
+                @DestinationAirportId,
+                @DepartureTime,
+                @ArrivalTime,
+                @AircraftType,
+                @DaysOfOperation,
+                @EffectiveFrom,
+                @EffectiveTo,
+                @Status,
+                @CreatedOn,
+                NULL
+            );
+            """;
+
+        await using var connection =
+            new SqlConnection(_connectionString);
+
+        await using var command =
+            new SqlCommand(sql, connection);
+
+        command.Parameters.Add(
+            "@FlightNumber",
+            SqlDbType.VarChar,
+            7).Value = schedule.FlightNumber;
+
+        command.Parameters.Add(
+            "@OriginAirportId",
+            SqlDbType.Int).Value =
+            schedule.OriginAirportId;
+
+        command.Parameters.Add(
+            "@DestinationAirportId",
+            SqlDbType.Int).Value =
+            schedule.DestinationAirportId;
+
+        command.Parameters.Add(
+            "@DepartureTime",
+            SqlDbType.Time).Value =
+            schedule.DepartureTime;
+
+        command.Parameters.Add(
+            "@ArrivalTime",
+            SqlDbType.Time).Value =
+            schedule.ArrivalTime;
+
+        command.Parameters.Add(
+            "@AircraftType",
+            SqlDbType.VarChar,
+            10).Value = schedule.AircraftType;
+
+        command.Parameters.Add(
+            "@DaysOfOperation",
+            SqlDbType.VarChar,
+            7).Value = schedule.DaysOfOperation;
+
+        command.Parameters.Add(
+            "@EffectiveFrom",
+            SqlDbType.Date).Value =
+            schedule.EffectiveFrom;
+
+        command.Parameters.Add(
+            "@EffectiveTo",
+            SqlDbType.Date).Value =
+            schedule.EffectiveTo.HasValue
+                ? schedule.EffectiveTo.Value
+                : DBNull.Value;
+
+        command.Parameters.Add(
+            "@Status",
+            SqlDbType.VarChar,
+            12).Value = schedule.Status;
+
+        command.Parameters.Add(
+            "@CreatedOn",
+            SqlDbType.DateTime2).Value =
+            schedule.CreatedOn;
+
+        try
+        {
+            await connection.OpenAsync(cancellationToken);
+
+            var result =
+                await command.ExecuteScalarAsync(cancellationToken);
+
+            if (result is null)
+            {
+                throw new InvalidOperationException(
+                    "The schedule was inserted but no ScheduleId was returned.");
+            }
+
+            return Convert.ToInt32(result);
+        }
+        catch (SqlException exception)
+            when (exception.Number is 2601 or 2627)
+        {
+            throw new DuplicateScheduleException();
+        }
+    }
 }
