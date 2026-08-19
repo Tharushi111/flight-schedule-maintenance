@@ -3,28 +3,64 @@ using ScheduleManagement.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddScoped<IAirportRepository, AirportRepository>();
-builder.Services.AddScoped<
-    IScheduleRepository,
-    ScheduleRepository>();
-builder.Services.AddScoped<IScheduleService, ScheduleService>();
+const string AngularDevelopmentCors =
+    "AngularDevelopment";
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
+// Dependency Injection
+
+builder.Services.AddScoped<
+    IAirportRepository,
+    AirportRepository>();
+
+builder.Services.AddScoped<
+    IScheduleRepository,
+    ScheduleRepository>();
+
+builder.Services.AddScoped<
+    IScheduleService,
+    ScheduleService>();
+
+
+// CORS
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(
+        AngularDevelopmentCors,
+        policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:4200")
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
+
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+
+// Development tools
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+
+
+// HTTP Pipeline
+
 app.UseHttpsRedirection();
+
+app.UseCors(AngularDevelopmentCors);
 
 app.UseAuthorization();
 
