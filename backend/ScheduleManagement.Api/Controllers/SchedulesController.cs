@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using ScheduleManagement.Api.Models.Responses;
 using ScheduleManagement.Api.Services;
+using ScheduleManagement.Api.Common;
+using ScheduleManagement.Api.Models.Requests;
 
 namespace ScheduleManagement.Api.Controllers;
 
@@ -104,5 +106,188 @@ public sealed class SchedulesController : ControllerBase
             .ToList();
 
         return Ok(response);
+    }
+
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(
+        typeof(ScheduleDetailsResponse),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(
+        StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ScheduleDetailsResponse>>
+        GetScheduleById(
+            int id,
+            CancellationToken cancellationToken)
+    {
+        var schedule =
+            await _scheduleService.GetByIdAsync(
+                id,
+                cancellationToken);
+
+        if (schedule is null)
+        {
+            return NotFound(new
+            {
+                message = "Schedule was not found."
+            });
+        }
+
+        var response =
+            new ScheduleDetailsResponse
+            {
+                ScheduleId = schedule.ScheduleId,
+
+                FlightNumber = schedule.FlightNumber,
+
+                OriginAirportId =
+                    schedule.OriginAirportId,
+
+                DestinationAirportId =
+                    schedule.DestinationAirportId,
+
+                DepartureTime =
+                    schedule.DepartureTime,
+
+                ArrivalTime =
+                    schedule.ArrivalTime,
+
+                ArrivesNextDay =
+                    schedule.ArrivalTime <
+                    schedule.DepartureTime,
+
+                AircraftType =
+                    schedule.AircraftType,
+
+                DaysOfOperation =
+                    schedule.DaysOfOperation,
+
+                EffectiveFrom =
+                    schedule.EffectiveFrom,
+
+                EffectiveTo =
+                    schedule.EffectiveTo,
+
+                Status =
+                    schedule.Status,
+
+                CreatedOn =
+                    schedule.CreatedOn,
+
+                ModifiedOn =
+                    schedule.ModifiedOn
+            };
+
+        return Ok(response);
+    }
+
+    [HttpPost]
+    [ProducesResponseType(
+        typeof(ScheduleDetailsResponse),
+        StatusCodes.Status201Created)]
+    [ProducesResponseType(
+        StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+        StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ScheduleDetailsResponse>>
+        CreateSchedule(
+            [FromBody] CreateScheduleRequest request,
+            CancellationToken cancellationToken)
+    {
+        try
+        {
+            var scheduleId =
+                await _scheduleService.CreateAsync(
+                    request,
+                    cancellationToken);
+
+            var schedule =
+                await _scheduleService.GetByIdAsync(
+                    scheduleId,
+                    cancellationToken);
+
+            if (schedule is null)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Schedule was created but could not be retrieved."
+                    });
+            }
+
+            var response =
+                new ScheduleDetailsResponse
+                {
+                    ScheduleId =
+                        schedule.ScheduleId,
+
+                    FlightNumber =
+                        schedule.FlightNumber,
+
+                    OriginAirportId =
+                        schedule.OriginAirportId,
+
+                    DestinationAirportId =
+                        schedule.DestinationAirportId,
+
+                    DepartureTime =
+                        schedule.DepartureTime,
+
+                    ArrivalTime =
+                        schedule.ArrivalTime,
+
+                    ArrivesNextDay =
+                        schedule.ArrivalTime <
+                        schedule.DepartureTime,
+
+                    AircraftType =
+                        schedule.AircraftType,
+
+                    DaysOfOperation =
+                        schedule.DaysOfOperation,
+
+                    EffectiveFrom =
+                        schedule.EffectiveFrom,
+
+                    EffectiveTo =
+                        schedule.EffectiveTo,
+
+                    Status =
+                        schedule.Status,
+
+                    CreatedOn =
+                        schedule.CreatedOn,
+
+                    ModifiedOn =
+                        schedule.ModifiedOn
+                };
+
+            return CreatedAtAction(
+                nameof(GetScheduleById),
+                new { id = scheduleId },
+                response);
+        }
+        catch (ScheduleValidationException exception)
+        {
+            foreach (var error in exception.Errors)
+            {
+                foreach (var message in error.Value)
+                {
+                    ModelState.AddModelError(
+                        error.Key,
+                        message);
+                }
+            }
+
+            return ValidationProblem(ModelState);
+        }
+        catch (DuplicateScheduleException exception)
+        {
+            return Conflict(new
+            {
+                message = exception.Message
+            });
+        }
     }
 }
