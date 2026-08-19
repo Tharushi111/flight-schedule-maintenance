@@ -489,4 +489,29 @@ public sealed class SchedulesController : ControllerBase
             return ValidationProblem(ModelState);
         }
     }
+
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(
+        StatusCodes.Status204NoContent)]
+    [ProducesResponseType(
+        StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteSchedule(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        var deleted =
+            await _scheduleService.DeleteAsync(
+                id,
+                cancellationToken);
+
+        if (!deleted)
+        {
+            return NotFound(new
+            {
+                message = "Schedule was not found."
+            });
+        }
+
+        return NoContent();
+    }
 }
