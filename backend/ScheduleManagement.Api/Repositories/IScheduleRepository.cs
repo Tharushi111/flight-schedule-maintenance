@@ -17,4 +17,14 @@ public interface IScheduleRepository
     Task<FlightSchedule?> GetByIdAsync(
     int scheduleId,
     CancellationToken cancellationToken = default);
+
+    Task<bool> UpdateAsync(
+    FlightSchedule schedule,
+    CancellationToken cancellationToken = default);
+
+    Task<bool> UpdateStatusAsync(
+    int scheduleId,
+    string status,
+    DateTime modifiedOn,
+    CancellationToken cancellationToken = default);
 }
