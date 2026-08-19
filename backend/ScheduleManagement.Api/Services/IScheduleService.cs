@@ -28,4 +28,8 @@ public interface IScheduleService
     int scheduleId,
     UpdateScheduleStatusRequest request,
     CancellationToken cancellationToken = default);
+
+    Task<bool> DeleteAsync(
+    int scheduleId,
+    CancellationToken cancellationToken = default);
 }
