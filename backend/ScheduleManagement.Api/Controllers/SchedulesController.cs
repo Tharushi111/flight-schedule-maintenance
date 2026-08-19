@@ -392,7 +392,6 @@ public sealed class SchedulesController : ControllerBase
 
 
     //Private validation helper method
-
     private void AddValidationErrors(
         ScheduleValidationException exception)
     {
