@@ -176,4 +176,113 @@ public sealed class ScheduleRepository : IScheduleRepository
 
         return schedules;
     }
+
+    public async Task<int> CreateAsync(
+    FlightSchedule schedule,
+    CancellationToken cancellationToken = default)
+{
+    const string sql = """
+        INSERT INTO FlightSchedule
+        (
+            FlightNumber,
+            OriginAirportId,
+            DestinationAirportId,
+            DepartureTime,
+            ArrivalTime,
+            AircraftType,
+            DaysOfOperation,
+            EffectiveFrom,
+            EffectiveTo,
+            Status,
+            CreatedOn,
+            ModifiedOn
+        )
+        OUTPUT INSERTED.ScheduleId
+        VALUES
+        (
+            @FlightNumber,
+            @OriginAirportId,
+            @DestinationAirportId,
+            @DepartureTime,
+            @ArrivalTime,
+            @AircraftType,
+            @DaysOfOperation,
+            @EffectiveFrom,
+            @EffectiveTo,
+            @Status,
+            @CreatedOn,
+            NULL
+        );
+        """;
+
+    await using var connection =
+        new SqlConnection(_connectionString);
+
+    await using var command =
+        new SqlCommand(sql, connection);
+
+    command.Parameters.Add(
+        "@FlightNumber",
+        SqlDbType.VarChar,
+        7).Value = schedule.FlightNumber;
+
+    command.Parameters.Add(
+        "@OriginAirportId",
+        SqlDbType.Int).Value = schedule.OriginAirportId;
+
+    command.Parameters.Add(
+        "@DestinationAirportId",
+        SqlDbType.Int).Value = schedule.DestinationAirportId;
+
+    command.Parameters.Add(
+        "@DepartureTime",
+        SqlDbType.Time).Value = schedule.DepartureTime;
+
+    command.Parameters.Add(
+        "@ArrivalTime",
+        SqlDbType.Time).Value = schedule.ArrivalTime;
+
+    command.Parameters.Add(
+        "@AircraftType",
+        SqlDbType.VarChar,
+        10).Value = schedule.AircraftType;
+
+    command.Parameters.Add(
+        "@DaysOfOperation",
+        SqlDbType.VarChar,
+        7).Value = schedule.DaysOfOperation;
+
+    command.Parameters.Add(
+        "@EffectiveFrom",
+        SqlDbType.Date).Value = schedule.EffectiveFrom;
+
+    command.Parameters.Add(
+        "@EffectiveTo",
+        SqlDbType.Date).Value =
+        schedule.EffectiveTo.HasValue
+            ? schedule.EffectiveTo.Value
+            : DBNull.Value;
+
+    command.Parameters.Add(
+        "@Status",
+        SqlDbType.VarChar,
+        12).Value = schedule.Status;
+
+    command.Parameters.Add(
+        "@CreatedOn",
+        SqlDbType.DateTime2).Value = schedule.CreatedOn;
+
+    await connection.OpenAsync(cancellationToken);
+
+    var result =
+        await command.ExecuteScalarAsync(cancellationToken);
+
+    if (result is null)
+    {
+        throw new InvalidOperationException(
+            "The schedule was inserted but no ScheduleId was returned.");
+    }
+
+    return Convert.ToInt32(result);
+}
 }
