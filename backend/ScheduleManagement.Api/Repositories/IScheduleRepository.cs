@@ -27,4 +27,8 @@ public interface IScheduleRepository
     string status,
     DateTime modifiedOn,
     CancellationToken cancellationToken = default);
+
+    Task<bool> DeleteAsync(
+    int scheduleId,
+    CancellationToken cancellationToken = default);
 }
