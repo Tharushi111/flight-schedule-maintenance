@@ -18,4 +18,14 @@ public interface IScheduleService
     Task<FlightSchedule?> GetByIdAsync(
     int scheduleId,
     CancellationToken cancellationToken = default);
+
+    Task<FlightSchedule?> UpdateAsync(
+    int scheduleId,
+    UpdateScheduleRequest request,
+    CancellationToken cancellationToken = default);
+
+    Task<FlightSchedule?> UpdateStatusAsync(
+    int scheduleId,
+    UpdateScheduleStatusRequest request,
+    CancellationToken cancellationToken = default);
 }
