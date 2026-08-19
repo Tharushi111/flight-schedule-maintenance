@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.Data.SqlClient;
 using ScheduleManagement.Api.Models.Entities;
 
@@ -88,4 +89,32 @@ public sealed class AirportRepository : IAirportRepository
 
         return airports;
     }
+
+    public async Task<bool> ExistsAsync(
+    int airportId,
+    CancellationToken cancellationToken = default)
+{
+    const string sql = """
+        SELECT COUNT(1)
+        FROM Airport
+        WHERE AirportId = @AirportId;
+        """;
+
+    await using var connection =
+        new SqlConnection(_connectionString);
+
+    await using var command =
+        new SqlCommand(sql, connection);
+
+    command.Parameters.Add(
+        "@AirportId",
+        SqlDbType.Int).Value = airportId;
+
+    await connection.OpenAsync(cancellationToken);
+
+    var result =
+        await command.ExecuteScalarAsync(cancellationToken);
+
+    return Convert.ToInt32(result) > 0;
+}
 }
