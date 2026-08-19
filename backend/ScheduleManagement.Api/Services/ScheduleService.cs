@@ -171,7 +171,7 @@ public sealed class ScheduleService : IScheduleService
 
 
         // Time Validation
-
+        
         if (!request.DepartureTime.HasValue)
         {
             AddError(
