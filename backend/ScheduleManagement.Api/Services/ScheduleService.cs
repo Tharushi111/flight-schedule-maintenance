@@ -476,4 +476,13 @@ public async Task<FlightSchedule?> UpdateStatusAsync(
         scheduleId,
         cancellationToken);
 }
+
+public async Task<bool> DeleteAsync(
+    int scheduleId,
+    CancellationToken cancellationToken = default)
+{
+    return await _scheduleRepository.DeleteAsync(
+        scheduleId,
+        cancellationToken);
+}
 }
