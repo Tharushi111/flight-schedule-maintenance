@@ -407,4 +407,161 @@ public sealed class ScheduleRepository : IScheduleRepository
             throw new DuplicateScheduleException();
         }
     }
+
+    public async Task<bool> UpdateAsync(
+    FlightSchedule schedule,
+    CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            UPDATE FlightSchedule
+            SET
+                FlightNumber = @FlightNumber,
+                OriginAirportId = @OriginAirportId,
+                DestinationAirportId = @DestinationAirportId,
+                DepartureTime = @DepartureTime,
+                ArrivalTime = @ArrivalTime,
+                AircraftType = @AircraftType,
+                DaysOfOperation = @DaysOfOperation,
+                EffectiveFrom = @EffectiveFrom,
+                EffectiveTo = @EffectiveTo,
+                Status = @Status,
+                ModifiedOn = @ModifiedOn
+            WHERE ScheduleId = @ScheduleId;
+            """;
+
+        await using var connection =
+            new SqlConnection(_connectionString);
+
+        await using var command =
+            new SqlCommand(sql, connection);
+
+        command.Parameters.Add(
+            "@ScheduleId",
+            SqlDbType.Int).Value =
+            schedule.ScheduleId;
+
+        command.Parameters.Add(
+            "@FlightNumber",
+            SqlDbType.VarChar,
+            7).Value =
+            schedule.FlightNumber;
+
+        command.Parameters.Add(
+            "@OriginAirportId",
+            SqlDbType.Int).Value =
+            schedule.OriginAirportId;
+
+        command.Parameters.Add(
+            "@DestinationAirportId",
+            SqlDbType.Int).Value =
+            schedule.DestinationAirportId;
+
+        command.Parameters.Add(
+            "@DepartureTime",
+            SqlDbType.Time).Value =
+            schedule.DepartureTime;
+
+        command.Parameters.Add(
+            "@ArrivalTime",
+            SqlDbType.Time).Value =
+            schedule.ArrivalTime;
+
+        command.Parameters.Add(
+            "@AircraftType",
+            SqlDbType.VarChar,
+            10).Value =
+            schedule.AircraftType;
+
+        command.Parameters.Add(
+            "@DaysOfOperation",
+            SqlDbType.VarChar,
+            7).Value =
+            schedule.DaysOfOperation;
+
+        command.Parameters.Add(
+            "@EffectiveFrom",
+            SqlDbType.Date).Value =
+            schedule.EffectiveFrom;
+
+        command.Parameters.Add(
+            "@EffectiveTo",
+            SqlDbType.Date).Value =
+            schedule.EffectiveTo.HasValue
+                ? schedule.EffectiveTo.Value
+                : DBNull.Value;
+
+        command.Parameters.Add(
+            "@Status",
+            SqlDbType.VarChar,
+            12).Value =
+            schedule.Status;
+
+        command.Parameters.Add(
+            "@ModifiedOn",
+            SqlDbType.DateTime2).Value =
+            schedule.ModifiedOn
+            ?? throw new InvalidOperationException(
+                "ModifiedOn must be set before updating a schedule.");
+
+        try
+        {
+            await connection.OpenAsync(cancellationToken);
+
+            var affectedRows =
+                await command.ExecuteNonQueryAsync(
+                    cancellationToken);
+
+            return affectedRows > 0;
+        }
+        catch (SqlException exception)
+            when (exception.Number is 2601 or 2627)
+        {
+            throw new DuplicateScheduleException();
+        }
+    }
+
+    public async Task<bool> UpdateStatusAsync(
+    int scheduleId,
+    string status,
+    DateTime modifiedOn,
+    CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            UPDATE FlightSchedule
+            SET
+                Status = @Status,
+                ModifiedOn = @ModifiedOn
+            WHERE ScheduleId = @ScheduleId;
+            """;
+
+        await using var connection =
+            new SqlConnection(_connectionString);
+
+        await using var command =
+            new SqlCommand(sql, connection);
+
+        command.Parameters.Add(
+            "@ScheduleId",
+            SqlDbType.Int).Value =
+            scheduleId;
+
+        command.Parameters.Add(
+            "@Status",
+            SqlDbType.VarChar,
+            12).Value =
+            status;
+
+        command.Parameters.Add(
+            "@ModifiedOn",
+            SqlDbType.DateTime2).Value =
+            modifiedOn;
+
+        await connection.OpenAsync(cancellationToken);
+
+        var affectedRows =
+            await command.ExecuteNonQueryAsync(
+                cancellationToken);
+
+        return affectedRows > 0;
+    }
 }
