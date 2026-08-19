@@ -9,4 +9,8 @@ public interface IScheduleRepository
         int? destinationAirportId,
         string? status,
         CancellationToken cancellationToken = default);
+
+    Task<int> CreateAsync(
+    FlightSchedule schedule,
+    CancellationToken cancellationToken = default);
 }
