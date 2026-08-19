@@ -212,4 +212,13 @@ public sealed class ScheduleService : IScheduleService
         schedule,
         cancellationToken);
 }
+
+    public async Task<FlightSchedule?> GetByIdAsync(
+        int scheduleId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _scheduleRepository.GetByIdAsync(
+            scheduleId,
+            cancellationToken);
+    }
 }
