@@ -8,12 +8,15 @@ namespace ScheduleManagement.Api.Services;
 public sealed class ScheduleService : IScheduleService
 {
     private readonly IScheduleRepository _scheduleRepository;
+    private readonly IAirportRepository _airportRepository;
 
-    public ScheduleService(
-        IScheduleRepository scheduleRepository)
-    {
-        _scheduleRepository = scheduleRepository;
-    }
+public ScheduleService(
+    IScheduleRepository scheduleRepository,
+    IAirportRepository airportRepository)
+{
+    _scheduleRepository = scheduleRepository;
+    _airportRepository = airportRepository;
+}
 
     public async Task<IReadOnlyList<ScheduleListRow>> GetAllAsync(
         int? originAirportId,
@@ -28,7 +31,7 @@ public sealed class ScheduleService : IScheduleService
             cancellationToken);
     }
 
-    public async Task<int> CreateAsync(
+   public async Task<int> CreateAsync(
     CreateScheduleRequest request,
     CancellationToken cancellationToken = default)
 {
@@ -46,6 +49,8 @@ public sealed class ScheduleService : IScheduleService
         messages.Add(message);
     }
 
+    // Flight Number Validation
+
     var flightNumber =
         request.FlightNumber.Trim().ToUpperInvariant();
 
@@ -58,12 +63,31 @@ public sealed class ScheduleService : IScheduleService
             "Flight number must contain a two-letter carrier code followed by 3 or 4 digits.");
     }
 
+    // Origin Airport Validation
+
     if (request.OriginAirportId <= 0)
     {
         AddError(
             "originAirportId",
             "Origin airport is required.");
     }
+    else
+    {
+        var originExists =
+            await _airportRepository.ExistsAsync(
+                request.OriginAirportId,
+                cancellationToken);
+
+        if (!originExists)
+        {
+            AddError(
+                "originAirportId",
+                "Origin airport does not exist.");
+        }
+    }
+
+    
+    // Destination Airport Validation
 
     if (request.DestinationAirportId <= 0)
     {
@@ -71,6 +95,22 @@ public sealed class ScheduleService : IScheduleService
             "destinationAirportId",
             "Destination airport is required.");
     }
+    else
+    {
+        var destinationExists =
+            await _airportRepository.ExistsAsync(
+                request.DestinationAirportId,
+                cancellationToken);
+
+        if (!destinationExists)
+        {
+            AddError(
+                "destinationAirportId",
+                "Destination airport does not exist.");
+        }
+    }
+
+    // Origin must be different from Destination
 
     if (request.OriginAirportId > 0 &&
         request.DestinationAirportId > 0 &&
@@ -82,6 +122,8 @@ public sealed class ScheduleService : IScheduleService
             "Origin and destination airports must be different.");
     }
 
+    // Time Validation
+    
     if (!request.DepartureTime.HasValue)
     {
         AddError(
@@ -96,11 +138,21 @@ public sealed class ScheduleService : IScheduleService
             "Arrival time is required.");
     }
 
+    
+    // Aircraft Type Validation
+   
     var allowedAircraftTypes =
-        new[] { "A320", "A330", "A350" };
+        new[]
+        {
+            "A320",
+            "A330",
+            "A350"
+        };
 
     var aircraftType =
-        request.AircraftType.Trim().ToUpperInvariant();
+        request.AircraftType
+            .Trim()
+            .ToUpperInvariant();
 
     if (!allowedAircraftTypes.Contains(aircraftType))
     {
@@ -109,6 +161,8 @@ public sealed class ScheduleService : IScheduleService
             "Aircraft type must be A320, A330, or A350.");
     }
 
+    // Days Of Operation Validation
+    
     var daysOfOperation =
         request.DaysOfOperation.Trim();
 
@@ -130,6 +184,8 @@ public sealed class ScheduleService : IScheduleService
             "At least one operating day must be selected.");
     }
 
+    // Effective Date Validation
+
     if (!request.EffectiveFrom.HasValue)
     {
         AddError(
@@ -147,8 +203,15 @@ public sealed class ScheduleService : IScheduleService
             "Effective to date cannot be earlier than effective from date.");
     }
 
+    // Status Validation
+
     var allowedStatuses =
-        new[] { "Draft", "Published", "Suspended" };
+        new[]
+        {
+            "Draft",
+            "Published",
+            "Suspended"
+        };
 
     var matchedStatus =
         allowedStatuses.FirstOrDefault(
@@ -163,6 +226,8 @@ public sealed class ScheduleService : IScheduleService
             "Status must be Draft, Published, or Suspended.");
     }
 
+    // Throw validation errors
+
     if (errors.Count > 0)
     {
         throw new ScheduleValidationException(
@@ -171,43 +236,49 @@ public sealed class ScheduleService : IScheduleService
                 pair => pair.Value.ToArray()));
     }
 
-    var schedule = new FlightSchedule
-    {
-        FlightNumber = flightNumber,
+    // Convert request into internal FlightSchedule entity
+    var schedule =
+        new FlightSchedule
+        {
+            FlightNumber =
+                flightNumber,
 
-        OriginAirportId =
-            request.OriginAirportId,
+            OriginAirportId =
+                request.OriginAirportId,
 
-        DestinationAirportId =
-            request.DestinationAirportId,
+            DestinationAirportId =
+                request.DestinationAirportId,
 
-        DepartureTime =
-            request.DepartureTime!.Value,
+            DepartureTime =
+                request.DepartureTime!.Value,
 
-        ArrivalTime =
-            request.ArrivalTime!.Value,
+            ArrivalTime =
+                request.ArrivalTime!.Value,
 
-        AircraftType =
-            aircraftType,
+            AircraftType =
+                aircraftType,
 
-        DaysOfOperation =
-            daysOfOperation,
+            DaysOfOperation =
+                daysOfOperation,
 
-        EffectiveFrom =
-            request.EffectiveFrom!.Value.Date,
+            EffectiveFrom =
+                request.EffectiveFrom!.Value.Date,
 
-        EffectiveTo =
-            request.EffectiveTo?.Date,
+            EffectiveTo =
+                request.EffectiveTo?.Date,
 
-        Status =
-            matchedStatus!,
+            Status =
+                matchedStatus!,
 
-        CreatedOn =
-            DateTime.UtcNow,
+            CreatedOn =
+                DateTime.UtcNow,
 
-        ModifiedOn = null
-    };
+            ModifiedOn =
+                null
+        };
 
+    // Save using repository
+    
     return await _scheduleRepository.CreateAsync(
         schedule,
         cancellationToken);
@@ -263,18 +334,50 @@ public sealed class ScheduleService : IScheduleService
             "Flight number must contain a two-letter carrier code followed by 3 or 4 digits.");
     }
 
+    // Origin Airport Validation
+
     if (request.OriginAirportId <= 0)
     {
         AddError(
             "originAirportId",
             "Origin airport is required.");
     }
+    else
+    {
+        var originExists =
+            await _airportRepository.ExistsAsync(
+                request.OriginAirportId,
+                cancellationToken);
+
+        if (!originExists)
+        {
+            AddError(
+                "originAirportId",
+                "Origin airport does not exist.");
+        }
+    }
+
+    // Destination Airport Validation
 
     if (request.DestinationAirportId <= 0)
     {
         AddError(
             "destinationAirportId",
             "Destination airport is required.");
+    }
+    else
+    {
+        var destinationExists =
+            await _airportRepository.ExistsAsync(
+                request.DestinationAirportId,
+                cancellationToken);
+
+        if (!destinationExists)
+        {
+            AddError(
+                "destinationAirportId",
+                "Destination airport does not exist.");
+        }
     }
 
     if (request.OriginAirportId > 0 &&
