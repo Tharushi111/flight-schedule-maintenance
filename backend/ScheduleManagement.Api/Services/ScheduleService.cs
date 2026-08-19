@@ -20,7 +20,7 @@ public sealed class ScheduleService : IScheduleService
     }
 
 
-    // Get all schedules
+    // Get all schedules with optional filters
     public async Task<IReadOnlyList<ScheduleListRow>> GetAllAsync(
         int? originAirportId,
         int? destinationAirportId,
@@ -69,7 +69,7 @@ public sealed class ScheduleService : IScheduleService
     }
 
 
-    // Create new schedule
+    // create new schedule
     public async Task<int> CreateAsync(
         CreateScheduleRequest request,
         CancellationToken cancellationToken = default)
@@ -93,7 +93,7 @@ public sealed class ScheduleService : IScheduleService
         }
 
 
-        // Flight Number Validation
+        //Flight Number Validation
 
         var flightNumber =
             request.FlightNumber
@@ -159,7 +159,6 @@ public sealed class ScheduleService : IScheduleService
 
 
         // Origin must differ from Destination
-
         if (request.OriginAirportId > 0 &&
             request.DestinationAirportId > 0 &&
             request.OriginAirportId ==
@@ -188,8 +187,7 @@ public sealed class ScheduleService : IScheduleService
         }
 
        
-        // Aircraft Type Validation
-        
+        // Aircraft Type Validation  
         var aircraftType =
             request.AircraftType
                 .Trim()
