@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using ScheduleManagement.Api.Models.Responses;
-using ScheduleManagement.Api.Services;
 using ScheduleManagement.Api.Common;
 using ScheduleManagement.Api.Models.Requests;
+using ScheduleManagement.Api.Models.Responses;
+using ScheduleManagement.Api.Services;
 
 namespace ScheduleManagement.Api.Controllers;
 
@@ -10,14 +10,6 @@ namespace ScheduleManagement.Api.Controllers;
 [Route("api/[controller]")]
 public sealed class SchedulesController : ControllerBase
 {
-    private static readonly HashSet<string> AllowedStatuses =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            "Draft",
-            "Published",
-            "Suspended"
-        };
-
     private readonly IScheduleService _scheduleService;
 
     public SchedulesController(
@@ -26,6 +18,8 @@ public sealed class SchedulesController : ControllerBase
         _scheduleService = scheduleService;
     }
 
+
+    //Get all schedules
     [HttpGet]
     [ProducesResponseType(
         typeof(IReadOnlyList<ScheduleListResponse>),
@@ -39,6 +33,8 @@ public sealed class SchedulesController : ControllerBase
             [FromQuery] string? status,
             CancellationToken cancellationToken)
     {
+        
+
         if (originAirportId <= 0)
         {
             ModelState.AddModelError(
@@ -53,60 +49,37 @@ public sealed class SchedulesController : ControllerBase
                 "Destination airport ID must be greater than zero.");
         }
 
-        if (!string.IsNullOrWhiteSpace(status) &&
-            !AllowedStatuses.Contains(status))
-        {
-            ModelState.AddModelError(
-                "status",
-                "Status must be Draft, Published, or Suspended.");
-        }
-
         if (!ModelState.IsValid)
         {
             return ValidationProblem(ModelState);
         }
 
-        var schedules =
-            await _scheduleService.GetAllAsync(
-                originAirportId,
-                destinationAirportId,
-                status,
-                cancellationToken);
+        try
+        {
+            var schedules =
+                await _scheduleService.GetAllAsync(
+                    originAirportId,
+                    destinationAirportId,
+                    status,
+                    cancellationToken);
 
-        var response = schedules
-            .Select(schedule => new ScheduleListResponse
-            {
-                ScheduleId = schedule.ScheduleId,
+            var response =
+                schedules
+                    .Select(ToListResponse)
+                    .ToList();
 
-                FlightNumber = schedule.FlightNumber,
+            return Ok(response);
+        }
+        catch (ScheduleValidationException exception)
+        {
+            AddValidationErrors(exception);
 
-                Origin =
-                    $"{schedule.OriginIataCode} - {schedule.OriginCity}",
-
-                Destination =
-                    $"{schedule.DestinationIataCode} - {schedule.DestinationCity}",
-
-                DepartureTime = schedule.DepartureTime,
-
-                ArrivalTime = schedule.ArrivalTime,
-
-                ArrivesNextDay =
-                    schedule.ArrivalTime < schedule.DepartureTime,
-
-                AircraftType = schedule.AircraftType,
-
-                DaysOfOperation = schedule.DaysOfOperation,
-
-                EffectiveFrom = schedule.EffectiveFrom,
-
-                EffectiveTo = schedule.EffectiveTo,
-
-                Status = schedule.Status
-            })
-            .ToList();
-
-        return Ok(response);
+            return ValidationProblem(ModelState);
+        }
     }
+
+
+    //Get schedule by ID
 
     [HttpGet("{id:int}")]
     [ProducesResponseType(
@@ -132,53 +105,11 @@ public sealed class SchedulesController : ControllerBase
             });
         }
 
-        var response =
-            new ScheduleDetailsResponse
-            {
-                ScheduleId = schedule.ScheduleId,
-
-                FlightNumber = schedule.FlightNumber,
-
-                OriginAirportId =
-                    schedule.OriginAirportId,
-
-                DestinationAirportId =
-                    schedule.DestinationAirportId,
-
-                DepartureTime =
-                    schedule.DepartureTime,
-
-                ArrivalTime =
-                    schedule.ArrivalTime,
-
-                ArrivesNextDay =
-                    schedule.ArrivalTime <
-                    schedule.DepartureTime,
-
-                AircraftType =
-                    schedule.AircraftType,
-
-                DaysOfOperation =
-                    schedule.DaysOfOperation,
-
-                EffectiveFrom =
-                    schedule.EffectiveFrom,
-
-                EffectiveTo =
-                    schedule.EffectiveTo,
-
-                Status =
-                    schedule.Status,
-
-                CreatedOn =
-                    schedule.CreatedOn,
-
-                ModifiedOn =
-                    schedule.ModifiedOn
-            };
-
-        return Ok(response);
+        return Ok(ToDetailsResponse(schedule));
     }
+
+
+   //Create new schedule
 
     [HttpPost]
     [ProducesResponseType(
@@ -217,51 +148,7 @@ public sealed class SchedulesController : ControllerBase
             }
 
             var response =
-                new ScheduleDetailsResponse
-                {
-                    ScheduleId =
-                        schedule.ScheduleId,
-
-                    FlightNumber =
-                        schedule.FlightNumber,
-
-                    OriginAirportId =
-                        schedule.OriginAirportId,
-
-                    DestinationAirportId =
-                        schedule.DestinationAirportId,
-
-                    DepartureTime =
-                        schedule.DepartureTime,
-
-                    ArrivalTime =
-                        schedule.ArrivalTime,
-
-                    ArrivesNextDay =
-                        schedule.ArrivalTime <
-                        schedule.DepartureTime,
-
-                    AircraftType =
-                        schedule.AircraftType,
-
-                    DaysOfOperation =
-                        schedule.DaysOfOperation,
-
-                    EffectiveFrom =
-                        schedule.EffectiveFrom,
-
-                    EffectiveTo =
-                        schedule.EffectiveTo,
-
-                    Status =
-                        schedule.Status,
-
-                    CreatedOn =
-                        schedule.CreatedOn,
-
-                    ModifiedOn =
-                        schedule.ModifiedOn
-                };
+                ToDetailsResponse(schedule);
 
             return CreatedAtAction(
                 nameof(GetScheduleById),
@@ -270,15 +157,7 @@ public sealed class SchedulesController : ControllerBase
         }
         catch (ScheduleValidationException exception)
         {
-            foreach (var error in exception.Errors)
-            {
-                foreach (var message in error.Value)
-                {
-                    ModelState.AddModelError(
-                        error.Key,
-                        message);
-                }
-            }
+            AddValidationErrors(exception);
 
             return ValidationProblem(ModelState);
         }
@@ -290,6 +169,9 @@ public sealed class SchedulesController : ControllerBase
             });
         }
     }
+
+
+   //Update full schedule
 
     [HttpPut("{id:int}")]
     [ProducesResponseType(
@@ -323,66 +205,11 @@ public sealed class SchedulesController : ControllerBase
                 });
             }
 
-            var response =
-                new ScheduleDetailsResponse
-                {
-                    ScheduleId =
-                        schedule.ScheduleId,
-
-                    FlightNumber =
-                        schedule.FlightNumber,
-
-                    OriginAirportId =
-                        schedule.OriginAirportId,
-
-                    DestinationAirportId =
-                        schedule.DestinationAirportId,
-
-                    DepartureTime =
-                        schedule.DepartureTime,
-
-                    ArrivalTime =
-                        schedule.ArrivalTime,
-
-                    ArrivesNextDay =
-                        schedule.ArrivalTime <
-                        schedule.DepartureTime,
-
-                    AircraftType =
-                        schedule.AircraftType,
-
-                    DaysOfOperation =
-                        schedule.DaysOfOperation,
-
-                    EffectiveFrom =
-                        schedule.EffectiveFrom,
-
-                    EffectiveTo =
-                        schedule.EffectiveTo,
-
-                    Status =
-                        schedule.Status,
-
-                    CreatedOn =
-                        schedule.CreatedOn,
-
-                    ModifiedOn =
-                        schedule.ModifiedOn
-                };
-
-            return Ok(response);
+            return Ok(ToDetailsResponse(schedule));
         }
         catch (ScheduleValidationException exception)
         {
-            foreach (var error in exception.Errors)
-            {
-                foreach (var message in error.Value)
-                {
-                    ModelState.AddModelError(
-                        error.Key,
-                        message);
-                }
-            }
+            AddValidationErrors(exception);
 
             return ValidationProblem(ModelState);
         }
@@ -394,6 +221,9 @@ public sealed class SchedulesController : ControllerBase
             });
         }
     }
+
+
+   //Update schedule status only
 
     [HttpPatch("{id:int}/status")]
     [ProducesResponseType(
@@ -425,70 +255,18 @@ public sealed class SchedulesController : ControllerBase
                 });
             }
 
-            var response =
-                new ScheduleDetailsResponse
-                {
-                    ScheduleId =
-                        schedule.ScheduleId,
-
-                    FlightNumber =
-                        schedule.FlightNumber,
-
-                    OriginAirportId =
-                        schedule.OriginAirportId,
-
-                    DestinationAirportId =
-                        schedule.DestinationAirportId,
-
-                    DepartureTime =
-                        schedule.DepartureTime,
-
-                    ArrivalTime =
-                        schedule.ArrivalTime,
-
-                    ArrivesNextDay =
-                        schedule.ArrivalTime <
-                        schedule.DepartureTime,
-
-                    AircraftType =
-                        schedule.AircraftType,
-
-                    DaysOfOperation =
-                        schedule.DaysOfOperation,
-
-                    EffectiveFrom =
-                        schedule.EffectiveFrom,
-
-                    EffectiveTo =
-                        schedule.EffectiveTo,
-
-                    Status =
-                        schedule.Status,
-
-                    CreatedOn =
-                        schedule.CreatedOn,
-
-                    ModifiedOn =
-                        schedule.ModifiedOn
-                };
-
-            return Ok(response);
+            return Ok(ToDetailsResponse(schedule));
         }
         catch (ScheduleValidationException exception)
         {
-            foreach (var error in exception.Errors)
-            {
-                foreach (var message in error.Value)
-                {
-                    ModelState.AddModelError(
-                        error.Key,
-                        message);
-                }
-            }
+            AddValidationErrors(exception);
 
             return ValidationProblem(ModelState);
         }
     }
+
+
+    //Delete schedule by ID
 
     [HttpDelete("{id:int}")]
     [ProducesResponseType(
@@ -513,5 +291,119 @@ public sealed class SchedulesController : ControllerBase
         }
 
         return NoContent();
+    }
+
+
+    //Private helper methods
+    private static ScheduleListResponse ToListResponse(
+        Models.Entities.ScheduleListRow schedule)
+    {
+        return new ScheduleListResponse
+        {
+            ScheduleId =
+                schedule.ScheduleId,
+
+            FlightNumber =
+                schedule.FlightNumber,
+
+            Origin =
+                $"{schedule.OriginIataCode} - {schedule.OriginCity}",
+
+            Destination =
+                $"{schedule.DestinationIataCode} - {schedule.DestinationCity}",
+
+            DepartureTime =
+                schedule.DepartureTime,
+
+            ArrivalTime =
+                schedule.ArrivalTime,
+
+            ArrivesNextDay =
+                schedule.ArrivalTime <
+                schedule.DepartureTime,
+
+            AircraftType =
+                schedule.AircraftType,
+
+            DaysOfOperation =
+                schedule.DaysOfOperation,
+
+            EffectiveFrom =
+                schedule.EffectiveFrom,
+
+            EffectiveTo =
+                schedule.EffectiveTo,
+
+            Status =
+                schedule.Status
+        };
+    }
+
+
+    private static ScheduleDetailsResponse ToDetailsResponse(
+        Models.Entities.FlightSchedule schedule)
+    {
+        return new ScheduleDetailsResponse
+        {
+            ScheduleId =
+                schedule.ScheduleId,
+
+            FlightNumber =
+                schedule.FlightNumber,
+
+            OriginAirportId =
+                schedule.OriginAirportId,
+
+            DestinationAirportId =
+                schedule.DestinationAirportId,
+
+            DepartureTime =
+                schedule.DepartureTime,
+
+            ArrivalTime =
+                schedule.ArrivalTime,
+
+            ArrivesNextDay =
+                schedule.ArrivalTime <
+                schedule.DepartureTime,
+
+            AircraftType =
+                schedule.AircraftType,
+
+            DaysOfOperation =
+                schedule.DaysOfOperation,
+
+            EffectiveFrom =
+                schedule.EffectiveFrom,
+
+            EffectiveTo =
+                schedule.EffectiveTo,
+
+            Status =
+                schedule.Status,
+
+            CreatedOn =
+                schedule.CreatedOn,
+
+            ModifiedOn =
+                schedule.ModifiedOn
+        };
+    }
+
+
+    //Private validation helper method
+
+    private void AddValidationErrors(
+        ScheduleValidationException exception)
+    {
+        foreach (var error in exception.Errors)
+        {
+            foreach (var message in error.Value)
+            {
+                ModelState.AddModelError(
+                    error.Key,
+                    message);
+            }
+        }
     }
 }
