@@ -1,0 +1,436 @@
+<div class="page-container">
+
+  <header class="page-header">
+
+    <div>
+      <p class="eyebrow">
+        Schedule Management
+      </p>
+
+      <h1>
+        {{ pageTitle() }}
+      </h1>
+    </div>
+
+    <a
+      routerLink="/schedules"
+      class="secondary-button">
+      Back to Schedules
+    </a>
+
+  </header>
+
+
+  @if (errorMessage()) {
+
+    <div class="error-message">
+      {{ errorMessage() }}
+    </div>
+
+  }
+
+
+  @if (loading()) {
+
+    <div class="state-card">
+      Loading schedule...
+    </div>
+
+  }
+
+  @else {
+
+    <form
+      class="form-card"
+      [formGroup]="form"
+      (ngSubmit)="submit()">
+
+
+      <!-- FLIGHT NUMBER -->
+
+      <div class="form-field">
+
+        <label for="flightNumber">
+          Flight Number
+        </label>
+
+        <input
+          id="flightNumber"
+          type="text"
+          maxlength="7"
+          placeholder="UL308"
+          formControlName="flightNumber">
+
+        @if (
+          form.controls.flightNumber.touched &&
+          form.controls.flightNumber.hasError(
+            'required'
+          )
+        ) {
+          <p class="field-error">
+            Flight number is required.
+          </p>
+        }
+
+        @if (
+          form.controls.flightNumber.touched &&
+          form.controls.flightNumber.hasError(
+            'pattern'
+          )
+        ) {
+          <p class="field-error">
+            Use two letters followed by 3 or 4 digits.
+          </p>
+        }
+
+      </div>
+
+
+      <!-- AIRPORTS -->
+
+      <div class="two-column">
+
+        <div class="form-field">
+
+          <label for="origin">
+            Origin Airport
+          </label>
+
+          <select
+            id="origin"
+            formControlName="originAirportId">
+
+            <option [ngValue]="null">
+              Select origin
+            </option>
+
+            @for (
+              airport of airports();
+              track airport.airportId
+            ) {
+              <option
+                [ngValue]="airport.airportId">
+
+                {{ airport.iataCode }}
+                - {{ airport.city }}
+
+              </option>
+            }
+
+          </select>
+
+          @if (
+            form.controls.originAirportId.touched &&
+            form.controls.originAirportId.invalid
+          ) {
+            <p class="field-error">
+              Origin airport is required.
+            </p>
+          }
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="destination">
+            Destination Airport
+          </label>
+
+          <select
+            id="destination"
+            formControlName="destinationAirportId">
+
+            <option [ngValue]="null">
+              Select destination
+            </option>
+
+            @for (
+              airport of airports();
+              track airport.airportId
+            ) {
+              <option
+                [ngValue]="airport.airportId">
+
+                {{ airport.iataCode }}
+                - {{ airport.city }}
+
+              </option>
+            }
+
+          </select>
+
+          @if (
+            form.controls.destinationAirportId.touched &&
+            form.controls.destinationAirportId.invalid
+          ) {
+            <p class="field-error">
+              Destination airport is required.
+            </p>
+          }
+
+        </div>
+
+      </div>
+
+
+      @if (
+        form.hasError('sameAirport') &&
+        (
+          form.controls.originAirportId.touched ||
+          form.controls.destinationAirportId.touched
+        )
+      ) {
+        <p class="field-error group-error">
+          Origin and destination airports must be different.
+        </p>
+      }
+
+
+      <!-- TIMES -->
+
+      <div class="two-column">
+
+        <div class="form-field">
+
+          <label for="departureTime">
+            Departure Time
+          </label>
+
+          <input
+            id="departureTime"
+            type="time"
+            formControlName="departureTime">
+
+          @if (
+            form.controls.departureTime.touched &&
+            form.controls.departureTime.invalid
+          ) {
+            <p class="field-error">
+              Departure time is required.
+            </p>
+          }
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="arrivalTime">
+            Arrival Time
+          </label>
+
+          <input
+            id="arrivalTime"
+            type="time"
+            formControlName="arrivalTime">
+
+          @if (
+            form.controls.arrivalTime.touched &&
+            form.controls.arrivalTime.invalid
+          ) {
+            <p class="field-error">
+              Arrival time is required.
+            </p>
+          }
+
+          <p class="field-help">
+            An earlier arrival time is treated as next-day arrival.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <!-- AIRCRAFT + STATUS -->
+
+      <div class="two-column">
+
+        <div class="form-field">
+
+          <label for="aircraftType">
+            Aircraft Type
+          </label>
+
+          <select
+            id="aircraftType"
+            formControlName="aircraftType">
+
+            <option value="">
+              Select aircraft
+            </option>
+
+            @for (
+              aircraft of aircraftTypes;
+              track aircraft
+            ) {
+              <option [value]="aircraft">
+                {{ aircraft }}
+              </option>
+            }
+
+          </select>
+
+          @if (
+            form.controls.aircraftType.touched &&
+            form.controls.aircraftType.invalid
+          ) {
+            <p class="field-error">
+              Aircraft type is required.
+            </p>
+          }
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="status">
+            Status
+          </label>
+
+          <select
+            id="status"
+            formControlName="status">
+
+            @for (
+              status of statuses;
+              track status
+            ) {
+              <option [value]="status">
+                {{ status }}
+              </option>
+            }
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <!-- DAYS -->
+
+      <fieldset
+        class="days-fieldset"
+        formGroupName="days">
+
+        <legend>
+          Days of Operation
+        </legend>
+
+        <div class="days-grid">
+
+          @for (
+            day of days;
+            track day.key
+          ) {
+
+            <label class="day-option">
+
+              <input
+                type="checkbox"
+                [formControlName]="day.key">
+
+              <span>
+                {{ day.label }}
+              </span>
+
+            </label>
+
+          }
+
+        </div>
+
+      </fieldset>
+
+
+      <!-- EFFECTIVE PERIOD -->
+
+      <div class="two-column">
+
+        <div class="form-field">
+
+          <label for="effectiveFrom">
+            Effective From
+          </label>
+
+          <input
+            id="effectiveFrom"
+            type="date"
+            formControlName="effectiveFrom">
+
+          @if (
+            form.controls.effectiveFrom.touched &&
+            form.controls.effectiveFrom.invalid
+          ) {
+            <p class="field-error">
+              Effective from date is required.
+            </p>
+          }
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label for="effectiveTo">
+            Effective To
+          </label>
+
+          <input
+            id="effectiveTo"
+            type="date"
+            formControlName="effectiveTo">
+
+          <p class="field-help">
+            Leave blank for an open-ended schedule.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      @if (
+        form.hasError(
+          'invalidEffectivePeriod'
+        ) &&
+        (
+          form.controls.effectiveFrom.touched ||
+          form.controls.effectiveTo.touched
+        )
+      ) {
+        <p class="field-error group-error">
+          Effective To cannot be earlier than Effective From.
+        </p>
+      }
+
+
+      <!-- ACTIONS -->
+
+      <div class="form-actions">
+
+        <a
+          routerLink="/schedules"
+          class="secondary-button">
+          Cancel
+        </a>
+
+        <button
+          type="submit"
+          class="primary-button"
+          [disabled]="saving()">
+
+          {{ saveButtonText() }}
+
+        </button>
+
+      </div>
+
+    </form>
+
+  }
+
+</div>
