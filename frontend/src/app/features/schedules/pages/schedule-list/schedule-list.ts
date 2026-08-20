@@ -15,13 +15,15 @@ import { ScheduleList as ScheduleListModel } from '../../../../core/models/sched
 
 import { AirportService } from '../../../../core/services/airport.service';
 import { ScheduleService } from '../../../../core/services/schedule.service';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-schedule-list',
   standalone: true,
   imports: [
-    ReactiveFormsModule
-  ],
+  ReactiveFormsModule,
+  RouterLink
+],
   templateUrl: './schedule-list.html',
   styleUrl: './schedule-list.css',
   changeDetection: ChangeDetectionStrategy.OnPush
