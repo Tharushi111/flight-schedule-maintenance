@@ -149,9 +149,7 @@ export class ScheduleList {
   }
 
 
-  // =========================================================
   // CLEAR FILTERS
-  // =========================================================
 
   clearFilters(): void {
     this.filterForm.reset({
@@ -164,9 +162,8 @@ export class ScheduleList {
   }
 
 
-  // =========================================================
+  
   // INLINE STATUS UPDATE
-  // =========================================================
 
   changeStatus(
     schedule: ScheduleListModel,
@@ -222,4 +219,47 @@ export class ScheduleList {
         }
       });
   }
+
+  deleteSchedule(
+  schedule: ScheduleListModel
+): void {
+  const confirmed = window.confirm(
+    `Are you sure you want to delete flight ${schedule.flightNumber}?`
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  this.errorMessage.set('');
+
+  this.scheduleService
+    .deleteSchedule(schedule.scheduleId)
+    .pipe(
+      takeUntilDestroyed(this.destroyRef)
+    )
+    .subscribe({
+      next: () => {
+        this.schedules.update(
+          schedules =>
+            schedules.filter(
+              item =>
+                item.scheduleId !==
+                schedule.scheduleId
+            )
+        );
+      },
+
+      error: (error) => {
+        console.error(
+          'Failed to delete schedule:',
+          error
+        );
+
+        this.errorMessage.set(
+          'Unable to delete the flight schedule.'
+        );
+      }
+    });
+}
 }
