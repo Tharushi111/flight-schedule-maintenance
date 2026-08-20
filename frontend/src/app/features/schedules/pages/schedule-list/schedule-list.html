@@ -297,7 +297,7 @@
                   <div class="effective-period">
 
                     <span>
-                      {{ schedule.effectiveFrom }}
+                      {{ schedule.effectiveFrom.substring(0, 10) }}
                     </span>
 
                     <span>
@@ -305,7 +305,11 @@
                     </span>
 
                     <span>
-                      {{ schedule.effectiveTo ?? 'Open-ended' }}
+                      {{
+                        schedule.effectiveTo
+                          ? schedule.effectiveTo.substring(0, 10)
+                          : 'Open-ended'
+                      }}
                     </span>
 
                   </div>

@@ -272,15 +272,54 @@ tbody tr:hover {
 }
 
 .text-button {
-  padding: 7px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+  padding: 7px 12px;
+
+  border: none;
+  border-radius: 8px;
+
   background: #eff6ff;
   color: #1d4ed8;
+
+  font: inherit;
+  font-weight: 600;
+
+  text-decoration: none;
+
+  cursor: pointer;
+}
+
+.text-button:hover {
+  background: #dbeafe;
+  text-decoration: none;
 }
 
 .danger-button {
-  padding: 7px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 34px;
+  padding: 7px 12px;
+
+  border: none;
+  border-radius: 8px;
+
   background: #fef2f2;
   color: #b42318;
+
+  font: inherit;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.danger-button:hover {
+  background: #fee2e2;
 }
 
 @media (max-width: 950px) {
