@@ -66,9 +66,7 @@ export class ScheduleList {
   }
 
 
-  // =========================================================
   // LOAD AIRPORTS
-  // =========================================================
 
   private loadAirports(): void {
     this.airportsLoading.set(true);
@@ -94,11 +92,8 @@ export class ScheduleList {
       });
   }
 
-
-  // =========================================================
   // LOAD SCHEDULES
-  // =========================================================
-
+  
   loadSchedules(): void {
     this.loading.set(true);
     this.errorMessage.set('');
@@ -140,9 +135,7 @@ export class ScheduleList {
   }
 
 
-  // =========================================================
   // APPLY FILTERS
-  // =========================================================
 
   applyFilters(): void {
     this.loadSchedules();
