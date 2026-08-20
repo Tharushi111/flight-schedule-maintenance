@@ -1,26 +1,30 @@
 <div class="page-container">
 
   <header class="page-header">
-    <div>
-      <p class="eyebrow">
-        Schedule Management
-      </p>
 
-      <h1>
-        Flight Schedules
-      </h1>
+  <div class="page-heading">
+    <p class="eyebrow">
+      Schedule Management
+    </p>
 
-      <p class="subtitle">
-        View and manage published flight schedules.
-      </p>
-    </div>
+    <h1>
+      Flight Schedules
+    </h1>
 
-    <button
-      type="button"
-      class="primary-button">
+    <p class="subtitle">
+      View and manage published flight schedules.
+    </p>
+  </div>
+
+  <div class="header-actions">
+    <a
+      routerLink="/schedules/new"
+      class="primary-button add-schedule-button">
       Add Schedule
-    </button>
-  </header>
+    </a>
+  </div>
+
+</header>
 
 
   <!-- ======================================================
@@ -320,14 +324,11 @@
 
 
                 <td>
-
                   <select
                     #statusSelect
                     class="status-select"
-                    [value]="schedule.status"
                     [disabled]="
-                      statusUpdatingId() ===
-                      schedule.scheduleId
+                      statusUpdatingId() === schedule.scheduleId
                     "
                     (change)="
                       changeStatus(
@@ -340,32 +341,31 @@
                       status of statuses;
                       track status
                     ) {
-
                       <option
-                        [value]="status">
+                        [value]="status"
+                        [selected]="status === schedule.status">
 
                         {{ status }}
 
                       </option>
-
                     }
 
                   </select>
-
                 </td>
-
 
                 <td>
 
                   <div class="action-buttons">
 
-                    <button
-                      type="button"
+                    <a
+                      [routerLink]="[
+                        '/schedules',
+                        schedule.scheduleId,
+                        'edit'
+                      ]"
                       class="text-button">
-
                       Edit
-
-                    </button>
+                    </a>
 
                     <button
                       type="button"
