@@ -1,0 +1,396 @@
+<div class="page-container">
+
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">
+        Schedule Management
+      </p>
+
+      <h1>
+        Flight Schedules
+      </h1>
+
+      <p class="subtitle">
+        View and manage published flight schedules.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      class="primary-button">
+      Add Schedule
+    </button>
+  </header>
+
+
+  <!-- ======================================================
+       FILTERS
+       ====================================================== -->
+
+  <section class="filter-card">
+
+    <form
+      [formGroup]="filterForm"
+      (ngSubmit)="applyFilters()">
+
+      <div class="filter-grid">
+
+        <div class="form-field">
+          <label for="origin">
+            Origin
+          </label>
+
+          <select
+            id="origin"
+            formControlName="originAirportId">
+
+            <option [ngValue]="null">
+              All origins
+            </option>
+
+            @for (
+              airport of airports();
+              track airport.airportId
+            ) {
+              <option
+                [ngValue]="airport.airportId">
+
+                {{ airport.iataCode }}
+                - {{ airport.city }}
+
+              </option>
+            }
+
+          </select>
+        </div>
+
+
+        <div class="form-field">
+          <label for="destination">
+            Destination
+          </label>
+
+          <select
+            id="destination"
+            formControlName="destinationAirportId">
+
+            <option [ngValue]="null">
+              All destinations
+            </option>
+
+            @for (
+              airport of airports();
+              track airport.airportId
+            ) {
+              <option
+                [ngValue]="airport.airportId">
+
+                {{ airport.iataCode }}
+                - {{ airport.city }}
+
+              </option>
+            }
+
+          </select>
+        </div>
+
+
+        <div class="form-field">
+          <label for="status">
+            Status
+          </label>
+
+          <select
+            id="status"
+            formControlName="status">
+
+            <option value="">
+              All statuses
+            </option>
+
+            @for (
+              status of statuses;
+              track status
+            ) {
+              <option [value]="status">
+                {{ status }}
+              </option>
+            }
+
+          </select>
+        </div>
+
+
+        <div class="filter-actions">
+
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="loading()">
+
+            Apply Filters
+
+          </button>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="clearFilters()"
+            [disabled]="loading()">
+
+            Clear
+
+          </button>
+
+        </div>
+
+      </div>
+
+    </form>
+
+  </section>
+
+
+  <!-- ======================================================
+       ERROR
+       ====================================================== -->
+
+  @if (errorMessage()) {
+
+    <div class="error-message">
+      {{ errorMessage() }}
+    </div>
+
+  }
+
+
+  <!-- ======================================================
+       LOADING
+       ====================================================== -->
+
+  @if (loading()) {
+
+    <section class="state-card">
+
+      <div class="spinner"></div>
+
+      <p>
+        Loading flight schedules...
+      </p>
+
+    </section>
+
+  }
+
+
+  <!-- ======================================================
+       EMPTY STATE
+       ====================================================== -->
+
+  @else if (schedules().length === 0) {
+
+    <section class="state-card">
+
+      <h2>
+        No schedules found
+      </h2>
+
+      <p>
+        No flight schedules match the selected filters.
+      </p>
+
+    </section>
+
+  }
+
+
+  <!-- ======================================================
+       SCHEDULE TABLE
+       ====================================================== -->
+
+  @else {
+
+    <section class="table-card">
+
+      <div class="table-wrapper">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>Flight</th>
+              <th>Route</th>
+              <th>Departure</th>
+              <th>Arrival</th>
+              <th>Aircraft</th>
+              <th>Days</th>
+              <th>Effective Period</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+
+
+          <tbody>
+
+            @for (
+              schedule of schedules();
+              track schedule.scheduleId
+            ) {
+
+              <tr>
+
+                <td>
+                  <strong>
+                    {{ schedule.flightNumber }}
+                  </strong>
+                </td>
+
+
+                <td>
+                  <div class="route">
+
+                    <span>
+                      {{ schedule.origin }}
+                    </span>
+
+                    <span class="route-arrow">
+                      →
+                    </span>
+
+                    <span>
+                      {{ schedule.destination }}
+                    </span>
+
+                  </div>
+                </td>
+
+
+                <td>
+                  {{ schedule.departureTime }}
+                </td>
+
+
+                <td>
+
+                  {{ schedule.arrivalTime }}
+
+                  @if (schedule.arrivesNextDay) {
+
+                    <span class="next-day">
+                      +1
+                    </span>
+
+                  }
+
+                </td>
+
+
+                <td>
+                  {{ schedule.aircraftType }}
+                </td>
+
+
+                <td>
+                  <code>
+                    {{ schedule.daysOfOperation }}
+                  </code>
+                </td>
+
+
+                <td>
+
+                  <div class="effective-period">
+
+                    <span>
+                      {{ schedule.effectiveFrom }}
+                    </span>
+
+                    <span>
+                      to
+                    </span>
+
+                    <span>
+                      {{ schedule.effectiveTo ?? 'Open-ended' }}
+                    </span>
+
+                  </div>
+
+                </td>
+
+
+                <td>
+
+                  <select
+                    #statusSelect
+                    class="status-select"
+                    [value]="schedule.status"
+                    [disabled]="
+                      statusUpdatingId() ===
+                      schedule.scheduleId
+                    "
+                    (change)="
+                      changeStatus(
+                        schedule,
+                        statusSelect.value
+                      )
+                    ">
+
+                    @for (
+                      status of statuses;
+                      track status
+                    ) {
+
+                      <option
+                        [value]="status">
+
+                        {{ status }}
+
+                      </option>
+
+                    }
+
+                  </select>
+
+                </td>
+
+
+                <td>
+
+                  <div class="action-buttons">
+
+                    <button
+                      type="button"
+                      class="text-button">
+
+                      Edit
+
+                    </button>
+
+                    <button
+                      type="button"
+                      class="danger-button">
+
+                      Delete
+
+                    </button>
+
+                  </div>
+
+                </td>
+
+              </tr>
+
+            }
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+  }
+
+</div>
