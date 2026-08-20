@@ -19,6 +19,28 @@ export const routes: Routes = [
   },
 
   {
+    path: 'schedules/new',
+    loadComponent: () =>
+      import(
+        './features/schedules/pages/schedule-form/schedule-form'
+      ).then(
+        component =>
+          component.ScheduleForm
+      )
+  },
+
+  {
+    path: 'schedules/:id/edit',
+    loadComponent: () =>
+      import(
+        './features/schedules/pages/schedule-form/schedule-form'
+      ).then(
+        component =>
+          component.ScheduleForm
+      )
+  },
+
+  {
     path: '**',
     redirectTo: 'schedules'
   }
