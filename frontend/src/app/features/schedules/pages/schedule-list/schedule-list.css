@@ -13,10 +13,20 @@
 
 .page-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 28px;
+}
+
+.page-heading {
+  flex: 1;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  padding-bottom: 3px;
 }
 
 .eyebrow {
@@ -110,12 +120,32 @@ select:focus {
 .primary-button {
   min-height: 42px;
   padding: 0 18px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 8px;
+
   background: #2563eb;
   color: #ffffff;
+
+  font: inherit;
+  font-weight: 600;
+
+  text-decoration: none;
+
+  cursor: pointer;
 }
 
 .primary-button:hover {
   background: #1d4ed8;
+  text-decoration: none;
+}
+
+.add-schedule-button {
+  min-width: 135px;
 }
 
 .secondary-button {
@@ -259,8 +289,16 @@ tbody tr:hover {
   }
 
   .page-header {
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
+  }
+
+  .header-actions {
+    padding-bottom: 0;
+  }
+
+  .add-schedule-button {
+    width: fit-content;
   }
 
   .filter-grid {
