@@ -23,40 +23,43 @@ export class ScheduleService {
     `${environment.apiUrl}/schedules`;
 
 
-  getSchedules(
-    originAirportId?: number | null,
-    destinationAirportId?: number | null,
-    status?: string | null
-  ): Observable<ScheduleList[]> {
-    let params = new HttpParams();
+ getSchedules(
+  originAirportId: number | null = null,
+  destinationAirportId: number | null = null,
+  status: string | null = null
+): Observable<ScheduleList[]> {
 
-    if (originAirportId != null) {
-      params = params.set(
-        'origin',
-        originAirportId.toString()
-      );
-    }
+  let params = new HttpParams();
 
-    if (destinationAirportId != null) {
-      params = params.set(
-        'destination',
-        destinationAirportId.toString()
-      );
-    }
-
-    if (status?.trim()) {
-      params = params.set(
-        'status',
-        status.trim()
-      );
-    }
-
-    return this.http.get<ScheduleList[]>(
-      this.apiUrl,
-      { params }
+  if (originAirportId !== null) {
+    params = params.set(
+      'origin',
+      String(originAirportId)
     );
   }
 
+  if (destinationAirportId !== null) {
+    params = params.set(
+      'destination',
+      String(destinationAirportId)
+    );
+  }
+
+  const normalizedStatus =
+    status?.trim();
+
+  if (normalizedStatus) {
+    params = params.set(
+      'status',
+      normalizedStatus
+    );
+  }
+
+  return this.http.get<ScheduleList[]>(
+    this.apiUrl,
+    { params }
+  );
+}
 
   getScheduleById(
     scheduleId: number
