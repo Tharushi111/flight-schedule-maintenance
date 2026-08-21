@@ -614,47 +614,6 @@ Expected:
 ```text
 Application bundle generation complete.
 ```
-
----
-
-## Git
-
-Check the repository before pushing:
-
-```powershell
-git status
-```
-
-Commit example:
-
-```powershell
-git add .
-git commit -m "docs: add project setup and usage guide"
-git push
-```
-
-Do not commit generated dependencies or build output such as:
-
-```text
-node_modules/
-.angular/cache/
-dist/
-backend/**/bin/
-backend/**/obj/
-```
-
----
-
-## Development Notes
-
-- The `Airport` table is reference data for this module.
-- Only active airports are returned by `/api/airports`.
-- Schedule filtering is performed in SQL rather than in the browser.
-- The schedule list resolves origin and destination using airport joins.
-- `CreatedOn` is set when a schedule is created.
-- `ModifiedOn` is updated when a schedule is modified.
-- Authentication, audit logging, soft delete, timezone conversion, and automated tests are outside the current project scope.
-
 ---
 
 ## License
